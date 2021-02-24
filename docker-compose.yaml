@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: node
+    container_name: desafio-nginx-api
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh
+    command: npm run start
+    networks: 
+      - desafio-docker-nginx
+    volumes:
+      - ./node:/usr/src/app
+    tty: true
+    ports: 
+      - "3000:3000"
+    depends_on:
+      - db
+  db:
+    image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    container_name: desafio-nginx-db
+    restart: always
+    tty: true
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment: 
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=root
+    volumes:
+      - ./dump/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - desafio-docker-nginx
+  nginx:
+    build: 
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: desafio-nginx-nginx
+    ports:
+      - "8080:8080"
+    networks: 
+      - desafio-docker-nginx
+    depends_on: 
+      - api
+
+networks:
+  desafio-docker-nginx:
+    driver: bridge
